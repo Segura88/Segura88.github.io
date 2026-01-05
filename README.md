@@ -1,5 +1,5 @@
-<<<<<<< HEAD
 # Segura88.github.io
+
 # Memories — Quickstart (consolidado)
 
 Este README agrupa las instrucciones para desarrollo del backend y frontend, cómo probar en móvil y cómo ejecutar el script E2E.
@@ -169,4 +169,3 @@ Notas de seguridad y despliegue
 ---
 
 ¿Quieres que también actualice `frontend/README.md` con un extracto corto y el comando para arrancar con la ruta completa de npm? Puedo añadirlo ahora.
->>>>>>> 3deed0f (chore: prepare repo for GitHub Pages deployment)
