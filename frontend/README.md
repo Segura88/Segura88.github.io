@@ -28,6 +28,11 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 cd frontend
 npm install
 npm run dev
+
+# If `npm` is not available in your PATH but Node is installed in the default location on Windows,
+# run the commands using the full path to `npm.cmd` (PowerShell syntax):
+& 'C:\Program Files\nodejs\npm.cmd' install
+& 'C:\Program Files\nodejs\npm.cmd' run dev -- --host
 ```
 
 The frontend dev server proxies API calls to http://localhost:8000 as configured in `vite.config.ts`.

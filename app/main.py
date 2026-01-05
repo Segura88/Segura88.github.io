@@ -19,6 +19,34 @@ except Exception:
 from .tokens import consume_email_token, validate_email_token
 from fastapi.responses import JSONResponse, RedirectResponse
 from .config import EXTERNAL_BASE_URL
+from .config import ADMIN_USER, ADMIN_PASSWORD_HASH
+from passlib.context import CryptContext
+import jwt
+from datetime import timedelta
+
+# Use the same SECRET as other HMAC tokens for signing admin JWTs
+from .auth import SECRET
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def create_admin_jwt(username: str):
+    payload = {"sub": username}
+    # short expiry for admin tokens — 1 hour
+    payload["exp"] = (time.now()).timestamp() + 3600
+    token = jwt.encode(payload, SECRET, algorithm="HS256")
+    return token
+
+
+def verify_admin_jwt(token: str):
+    try:
+        data = jwt.decode(token, SECRET, algorithms=["HS256"])
+        sub = data.get("sub")
+        if sub and ADMIN_USER and sub == ADMIN_USER:
+            return True
+        return False
+    except Exception:
+        return False
 
 
 
@@ -155,6 +183,45 @@ def consume_token(token: str):
 
     # Otherwise return author — frontend can accept this response and allow writing
     return {"author": author, "ok": True}
+
+
+from pydantic import BaseModel
+
+
+class AdminLogin(BaseModel):
+    username: str
+    password: str
+
+
+@app.post("/admin/login")
+def admin_login(payload: AdminLogin):
+    # Verify admin is configured
+    if not ADMIN_USER or not ADMIN_PASSWORD_HASH:
+        raise HTTPException(status_code=503, detail="Admin not configured")
+
+    if payload.username != ADMIN_USER:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    # verify password
+    if not pwd_context.verify(payload.password, ADMIN_PASSWORD_HASH):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    token = create_admin_jwt(payload.username)
+    return {"ok": True, "token": token}
+
+
+@app.get("/admin/ping")
+def admin_ping(authorization: str | None = None):
+    # Accept Authorization: Bearer <token>
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+    parts = authorization.split()
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        raise HTTPException(status_code=401, detail="Invalid Authorization header")
+    token = parts[1]
+    if not verify_admin_jwt(token):
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    return {"ok": True}
 
 
 # Goals endpoints

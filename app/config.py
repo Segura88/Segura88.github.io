@@ -32,3 +32,13 @@ REMINDER_HOUR = 9
 # Base URL used to build links sent in emails. Example: https://memories.example.com
 # Keep empty in development; fill with your public base URL in production.
 EXTERNAL_BASE_URL = ""
+
+# Admin credentials (for a discreet hidden admin login)
+# Recommended: set these via environment variables in production and never commit secrets.
+# Example (PowerShell):
+#   $env:ADMIN_USER = 'admin'
+#   $env:ADMIN_PASSWORD_HASH = '<bcrypt-hash>'
+import os
+
+ADMIN_USER = os.environ.get("ADMIN_USER")
+ADMIN_PASSWORD_HASH = os.environ.get("ADMIN_PASSWORD_HASH")

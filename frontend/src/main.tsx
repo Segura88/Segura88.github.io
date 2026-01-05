@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import AdminLoginModal from './components/AdminLoginModal'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './index.css'
@@ -31,14 +32,16 @@ function TokenGate({ children }: { children: React.ReactNode }){
   const storedToken = typeof window !== 'undefined' ? localStorage.getItem('memories_token') : null
   const [tokenValid, setTokenValid] = useState<boolean | null>(null)
   const [activeToken, setActiveToken] = useState<string | null>(urlToken || storedToken)
+  const [showAdmin, setShowAdmin] = useState(false)
 
   useEffect(()=>{
     let tokenToCheck = urlToken || storedToken
     console.debug('[TokenGate] tokenToCheck=', tokenToCheck)
     if(!tokenToCheck){ setTokenValid(false); return }
     let mounted = true
-    // call backend directly (FastAPI runs on port 8000) to avoid Vite proxy issues
-    axios.get(`http://127.0.0.1:8000/token/${tokenToCheck}`).then((res)=>{
+  // call backend; use VITE_API_BASE when set (useful for deployed site)
+  const API_BASE = (import.meta.env.VITE_API_BASE as string) || 'http://127.0.0.1:8000'
+  axios.get(`${API_BASE.replace(/\/$/, '')}/token/${tokenToCheck}`).then((res)=>{
       console.debug('[TokenGate] token validation success', res && res.data)
       if(!mounted) return
       setTokenValid(true)
@@ -59,10 +62,18 @@ function TokenGate({ children }: { children: React.ReactNode }){
     return (
       <div className="min-h-screen bg-rose-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-28 h-28 mx-auto rounded-md bg-gradient-to-br from-pink-400 to-rose-600 flex items-center justify-center text-white font-bold text-2xl">M</div>
+          <div
+            className="w-28 h-28 mx-auto rounded-md bg-gradient-to-br from-pink-400 to-rose-600 flex items-center justify-center text-white font-bold text-2xl"
+            onDoubleClick={() => setShowAdmin(true)}
+            title="Memories logo (double-click for admin)"
+          >M</div>
           <h1 className="mt-4 text-3xl font-serif text-rose-800">Memories</h1>
           <p className="mt-2 text-neutral">Accede desde el enlace proporcionado en el email para ver el contenido de la web.</p>
         </div>
+        {showAdmin && <AdminLoginModal onClose={() => setShowAdmin(false)} onLogin={(token) => {
+          try { localStorage.setItem('memories_admin_token', token) } catch(e){}
+          setShowAdmin(false)
+        }} />}
       </div>
     )
   }

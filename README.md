@@ -166,6 +166,30 @@ Notas de seguridad y despliegue
 - No dejes ALLOW_WRITE ni TEST_NOW habilitados en producción. Estos atajos fueron añadidos para pruebas locales.
 - Guarda las credenciales SMTP y secretos en variables de entorno, no en ficheros en el repo.
 
+Admin login (opcional, discreto)
+- Puedes habilitar un login de administración discreto (accedible haciendo doble-clic en el logo del splash) estableciendo dos variables de entorno:
+	- `ADMIN_USER` — nombre de usuario (ej. "admin").
+	- `ADMIN_PASSWORD_HASH` — hash bcrypt de la contraseña (no almacenar la contraseña en texto claro).
+
+Generar un hash bcrypt con Python (ejemplo):
+
+```powershell
+python - <<'PY'
+from passlib.context import CryptContext
+pw = CryptContext(schemes=["bcrypt"]) 
+print(pw.hash('mi-contraseña-segura'))
+PY
+```
+
+En PowerShell puedes establecer las variables para la sesión actual:
+
+```powershell
+$env:ADMIN_USER = 'admin'
+$env:ADMIN_PASSWORD_HASH = '<pega-el-hash-aqui>'
+```
+
+La API expone `/admin/login` (POST) que devuelve un token admin (JWT corto) y `/admin/ping` para verificar el token. En producción asegúrate de servir la app con HTTPS y manejar secretos con un gestor de secretos.
+
 ---
 
 ¿Quieres que también actualice `frontend/README.md` con un extracto corto y el comando para arrancar con la ruta completa de npm? Puedo añadirlo ahora.
