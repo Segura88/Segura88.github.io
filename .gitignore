@@ -1,0 +1,11 @@
+.secret
+secrets.json
+__pycache__/
+venv/
+*.pyc
+
+# Node modules (frontend)
+/frontend/node_modules
+# Dist/build outputs
+/frontend/dist
+
