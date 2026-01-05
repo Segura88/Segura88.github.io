@@ -24,6 +24,12 @@ jobs:
 
       - name: Build frontend
         working-directory: ./frontend
+        env:
+          # Set VITE_API_BASE to your public backend URL in the repository secrets
+          VITE_API_BASE: ${{ secrets.VITE_API_BASE }}
+          # Optional: admin vars (only if you want admin login configured at build time)
+          ADMIN_USER: ${{ secrets.ADMIN_USER }}
+          ADMIN_PASSWORD_HASH: ${{ secrets.ADMIN_PASSWORD_HASH }}
         run: npm run build
 
       - name: Copy index to 404 for SPA fallback
