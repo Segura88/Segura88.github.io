@@ -5,9 +5,12 @@ import base64
 from .config import AUTHORS
 
 SECRET_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".secret")
+ENV_SECRET = os.environ.get("MEMORIES_SECRET") or os.environ.get("SECRET_KEY")
 
 
 def _load_or_create_secret() -> bytes:
+    if ENV_SECRET:
+        return ENV_SECRET.encode("utf-8")
     if os.path.exists(SECRET_FILE):
         with open(SECRET_FILE, "rb") as f:
             return f.read().strip()

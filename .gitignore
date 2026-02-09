@@ -1,5 +1,6 @@
 .secret
 secrets.json
+.env
 __pycache__/
 venv/
 *.pyc
@@ -8,4 +9,7 @@ venv/
 /frontend/node_modules
 # Dist/build outputs
 /frontend/dist
+
+# Local database
+memories.db
 

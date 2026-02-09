@@ -5,3 +5,4 @@ pytz
 requests
 passlib[bcrypt]
 PyJWT
+psycopg2-binary
