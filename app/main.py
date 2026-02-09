@@ -18,14 +18,15 @@ except Exception:
     scheduler_stop = None
 from .tokens import consume_email_token, validate_email_token
 from fastapi.responses import JSONResponse, RedirectResponse
-from .config import EXTERNAL_BASE_URL
+from .config import EXTERNAL_BASE_URL, AUTHORS, EMAIL_RECIPIENTS
 from .config import ADMIN_USER, ADMIN_PASSWORD_HASH
+from .emailer import send_email
 from passlib.context import CryptContext
 import jwt
 from datetime import timedelta
 
 # Use the same SECRET as other HMAC tokens for signing admin JWTs
-from .auth import SECRET
+from .auth import SECRET, generate_token
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -256,6 +257,44 @@ def admin_ping(authorization: str | None = None):
     if not verify_admin_jwt(token):
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     return {"ok": True}
+
+
+@app.post("/admin/send-test-emails")
+def admin_send_test_emails(request: Request):
+    # Authorization: Bearer <token>
+    auth = request.headers.get("authorization")
+    if not auth:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+    parts = auth.split()
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        raise HTTPException(status_code=401, detail="Invalid Authorization header")
+    token = parts[1]
+    if not verify_admin_jwt(token):
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    base_url = (EXTERNAL_BASE_URL or "").rstrip("/")
+    if not base_url:
+        raise HTTPException(status_code=400, detail="EXTERNAL_BASE_URL not configured")
+
+    results = []
+    for author in AUTHORS:
+        to_email = EMAIL_RECIPIENTS.get(author)
+        if not to_email:
+            results.append({"author": author, "ok": False, "error": "missing recipient"})
+            continue
+        author_token = generate_token(author)
+        link = f"{base_url}/?token={author_token}"
+        subject = "Tu token de acceso - Memories"
+        body = (
+            f"Hola {author},\n\n"
+            f"Aquí tienes tu enlace de acceso a Memories:\n{link}\n\n"
+            f"Token (por si lo necesitas):\n{author_token}\n\n"
+            "Saludos,\nSistema de Memories"
+        )
+        ok = send_email(subject, body, to_email)
+        results.append({"author": author, "ok": ok, "to": to_email, "link": link})
+
+    return {"ok": True, "results": results}
 
 
 # Goals endpoints
