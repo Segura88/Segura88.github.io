@@ -28,7 +28,7 @@ from datetime import timedelta
 # Use the same SECRET as other HMAC tokens for signing admin JWTs
 from .auth import SECRET, generate_token
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
 
 def create_admin_jwt(username: str):
