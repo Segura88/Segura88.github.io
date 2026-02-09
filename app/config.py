@@ -24,14 +24,14 @@ SMTP_USER = "jaimesegurapuig@gmail.com"
 EMAIL_FROM = "jaimesegurapuig@gmail.com"
 # Recipients mapping: author name -> email address. Update to real addresses.
 # Example: {"Jaime": "jaime@example.com", "Gabi": "gabi@example.com"}
-EMAIL_RECIPIENTS = {"Jaime": "jaimesegurapuig@gmail.com", "Gabi": "jaimesegurapuig2@gmail.com"}
+EMAIL_RECIPIENTS = {"Jaime": "jaimesegurapuig@gmail.com", "Gabi": "gbrcamacho04@gmail.com"}
 
 # Weekly reminder time (Sunday hour in TZ)
 REMINDER_HOUR = 9
 
 # Base URL used to build links sent in emails. Example: https://memories.example.com
 # Keep empty in development; fill with your public base URL in production.
-EXTERNAL_BASE_URL = ""
+EXTERNAL_BASE_URL = "http://segurarodrigue.me"
 
 # Admin credentials (for a discreet hidden admin login)
 # Recommended: set these via environment variables in production and never commit secrets.

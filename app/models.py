@@ -9,9 +9,10 @@ class WeeklyMemory(Base):
     created_at = Column(DateTime(timezone=True), nullable=False)    
     text = Column(Text, nullable=False)
     author = Column(String, nullable=False)
+    updated_at = Column(DateTime(timezone=True), nullable=False)
 
     __table_args__ = (
-        UniqueConstraint("week_monday", name="one_memory_per_week"),
+        UniqueConstraint("week_monday", "author", name="one_memory_per_author_per_week"),
     )
 
 

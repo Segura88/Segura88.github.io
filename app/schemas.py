@@ -10,6 +10,8 @@ class WeeklyMemoryOut(BaseModel):
     week_monday: datetime
     text: str
     author: str
+    created_at: datetime
+    updated_at: datetime
     # Pydantic v2 configuration: use attributes from ORM objects
     model_config = {"from_attributes": True}
 

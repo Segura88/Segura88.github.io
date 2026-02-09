@@ -1,13 +1,13 @@
 import React from 'react'
 
+type Memory = { author: string; text: string; created_at: string; updated_at: string }
 type Props = {
   week_monday: string
   status: 'pending' | 'written'
-  author?: string
-  text?: string
+  memories?: Memory[]
 }
 
-export default function WeekCard({ week_monday, status, author, text }: Props){
+export default function WeekCard({ week_monday, status, memories }: Props){
   const date = new Date(week_monday)
   const label = date.toLocaleDateString()
   return (
@@ -27,10 +27,14 @@ export default function WeekCard({ week_monday, status, author, text }: Props){
           </div>
         </div>
 
-        {status === 'written' && (
-          <div className="mt-3 text-sm text-neutral">
-            <div className="text-xs text-rose-500/80">Por {author}</div>
-            <div className="mt-1">{text}</div>
+        {status === 'written' && memories && memories.length > 0 && (
+          <div className="mt-3 space-y-3">
+            {memories.map((mem, idx) => (
+              <div key={idx} className="text-sm text-neutral border-l-4 border-rose-200 pl-3">
+                <div className="text-xs text-rose-500/80 font-semibold">{mem.author}</div>
+                <div className="mt-1">{mem.text}</div>
+              </div>
+            ))}
           </div>
         )}
       </div>

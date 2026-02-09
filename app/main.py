@@ -42,7 +42,9 @@ def verify_admin_jwt(token: str):
     try:
         data = jwt.decode(token, SECRET, algorithms=["HS256"])
         sub = data.get("sub")
-        if sub and ADMIN_USER and sub == ADMIN_USER:
+        import os
+        admin_user = ADMIN_USER or os.environ.get("ADMIN_USER")
+        if sub and admin_user and sub == admin_user:
             return True
         return False
     except Exception:
@@ -125,15 +127,23 @@ def create_weekly_memory(
 
     monday = time.week_monday(current)
 
-    existing = db.query(WeeklyMemory).filter_by(week_monday=monday).first()
+    # Check if THIS AUTHOR already has a memory for this week
+    existing = db.query(WeeklyMemory).filter_by(week_monday=monday, author=author).first()
     if existing:
-        raise HTTPException(status_code=409, detail="Week already written")
-
+        # Update existing memory
+        existing.text = payload.text
+        existing.updated_at = current
+        db.commit()
+        db.refresh(existing)
+        return existing
+    
+    # Create new memory for this author
     memory = WeeklyMemory(
         week_monday=monday,
         text=payload.text,
         author=author,
         created_at=current,
+        updated_at=current,
     )
 
     db.add(memory)
@@ -147,19 +157,32 @@ def create_weekly_memory(
 @app.get("/weeks")
 def get_weeks(db: Session = Depends(get_db)):
     weeks = time.all_2026_weeks()
-    memories = {
-        m.week_monday: m
-        for m in db.query(WeeklyMemory).all()
-    }
+    all_memories = db.query(WeeklyMemory).all()
+    
+    # Group memories by week
+    memories_by_week = {}
+    for m in all_memories:
+        if m.week_monday not in memories_by_week:
+            memories_by_week[m.week_monday] = []
+        memories_by_week[m.week_monday].append(m)
 
     result = []
     for w in weeks:
-        if w in memories:
+        if w in memories_by_week:
+            # Multiple authors may have written for this week
+            week_memories = memories_by_week[w]
             result.append({
                 "week_monday": w.isoformat(),
                 "status": "written",
-                "author": memories[w].author,
-                "text": memories[w].text,
+                "memories": [
+                    {
+                        "author": m.author,
+                        "text": m.text,
+                        "created_at": m.created_at.isoformat(),
+                        "updated_at": m.updated_at.isoformat(),
+                    }
+                    for m in week_memories
+                ],
             })
         else:
             result.append({
@@ -195,15 +218,18 @@ class AdminLogin(BaseModel):
 
 @app.post("/admin/login")
 def admin_login(payload: AdminLogin):
-    # Verify admin is configured
-    if not ADMIN_USER or not ADMIN_PASSWORD_HASH:
+    # Read admin config from environment at request time to handle reloads
+    import os
+    admin_user = ADMIN_USER or os.environ.get("ADMIN_USER")
+    admin_hash = ADMIN_PASSWORD_HASH or os.environ.get("ADMIN_PASSWORD_HASH")
+    if not admin_user or not admin_hash:
         raise HTTPException(status_code=503, detail="Admin not configured")
 
-    if payload.username != ADMIN_USER:
+    if payload.username != admin_user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     # verify password
-    if not pwd_context.verify(payload.password, ADMIN_PASSWORD_HASH):
+    if not pwd_context.verify(payload.password, admin_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     token = create_admin_jwt(payload.username)
@@ -219,6 +245,11 @@ def admin_ping(authorization: str | None = None):
     if len(parts) != 2 or parts[0].lower() != "bearer":
         raise HTTPException(status_code=401, detail="Invalid Authorization header")
     token = parts[1]
+    # ensure admin user is read dynamically as well
+    import os
+    admin_user = ADMIN_USER or os.environ.get("ADMIN_USER")
+    if not admin_user:
+        raise HTTPException(status_code=503, detail="Admin not configured")
     if not verify_admin_jwt(token):
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     return {"ok": True}

@@ -4,7 +4,8 @@ import Header from '../components/Header'
 import WeekCard from '../components/WeekCard'
 import { useSearchParams } from 'react-router-dom'
 
-type Week = { week_monday: string; status: 'pending' | 'written'; author?: string; text?: string }
+type Memory = { author: string; text: string; created_at: string; updated_at: string }
+type Week = { week_monday: string; status: 'pending' | 'written'; memories?: Memory[] }
 
 function todayMondayIso(){
   const now = new Date()
@@ -118,7 +119,7 @@ export default function Weeks(){
                   </div>
                   ) : (
                   <div onClick={()=> { if(w.status === 'pending') { if(tokenValid){ setEditingWeek(w.week_monday); setCurrentText('') } else { setStatus('Para escribir en semanas pasadas abre el enlace recibido por email (token en la URL)') } } }} className={`cursor-pointer ${w.status === 'pending' ? 'hover:shadow-lg' : ''}`}>
-                    <WeekCard week_monday={w.week_monday} status={w.status} author={w.author} text={w.text} />
+                    <WeekCard week_monday={w.week_monday} status={w.status} memories={w.memories} />
                   </div>
                 )}
               </div>
