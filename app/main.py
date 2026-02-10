@@ -232,6 +232,13 @@ def admin_login(payload: AdminLogin):
     if payload.username != admin_user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
+    scheme = pwd_context.identify(admin_hash)
+    if scheme != "pbkdf2_sha256":
+        raise HTTPException(
+            status_code=503,
+            detail="Admin hash must be pbkdf2_sha256. Update ADMIN_PASSWORD_HASH.",
+        )
+
     # verify password
     if not pwd_context.verify(payload.password, admin_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
