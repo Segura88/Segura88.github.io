@@ -262,6 +262,20 @@ def admin_login(payload: AdminLogin):
     return {"ok": True, "token": token}
 
 
+@app.get("/admin/env-check")
+def admin_env_check():
+    import os
+    admin_user = ADMIN_USER or os.environ.get("ADMIN_USER")
+    admin_hash = ADMIN_PASSWORD_HASH or os.environ.get("ADMIN_PASSWORD_HASH")
+    admin_hash = admin_hash.strip() if isinstance(admin_hash, str) else admin_hash
+    return {
+        "admin_user_set": bool(admin_user),
+        "admin_hash_set": bool(admin_hash),
+        "admin_hash_len": len(admin_hash) if admin_hash else 0,
+        "admin_hash_prefix": admin_hash[:10] if admin_hash else None,
+    }
+
+
 @app.get("/admin/ping")
 def admin_ping(authorization: str | None = None):
     # Accept Authorization: Bearer <token>
