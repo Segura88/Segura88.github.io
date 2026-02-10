@@ -58,6 +58,15 @@ Base.metadata.create_all(bind=engine)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # startup
+    try:
+        import os
+        admin_user_present = bool(os.environ.get("ADMIN_USER"))
+        admin_hash_present = bool(os.environ.get("ADMIN_PASSWORD_HASH"))
+        print(
+            f"[config] ADMIN_USER set={admin_user_present} ADMIN_PASSWORD_HASH set={admin_hash_present}"
+        )
+    except Exception:
+        pass
     if scheduler_start:
         scheduler_start()
     yield
