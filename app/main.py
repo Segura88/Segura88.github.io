@@ -226,6 +226,8 @@ def admin_login(payload: AdminLogin):
     import os
     admin_user = ADMIN_USER or os.environ.get("ADMIN_USER")
     admin_hash = ADMIN_PASSWORD_HASH or os.environ.get("ADMIN_PASSWORD_HASH")
+    if isinstance(admin_hash, str):
+        admin_hash = admin_hash.strip()
     if not admin_user or not admin_hash:
         raise HTTPException(status_code=503, detail="Admin not configured")
 
@@ -240,8 +242,12 @@ def admin_login(payload: AdminLogin):
         )
 
     # verify password
-    if not pwd_context.verify(payload.password, admin_hash):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+    try:
+        if not pwd_context.verify(payload.password, admin_hash):
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+    except Exception as exc:
+        # Surface the backend error to help debug env/config mismatches in Railway
+        raise HTTPException(status_code=500, detail=f"Admin verify error: {exc}")
 
     token = create_admin_jwt(payload.username)
     return {"ok": True, "token": token}
