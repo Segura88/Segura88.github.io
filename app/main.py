@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi import FastAPI, Depends, HTTPException, Request, Header
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from datetime import datetime
@@ -16,7 +16,7 @@ try:
 except Exception:
     scheduler_start = None
     scheduler_stop = None
-from .tokens import consume_email_token, validate_email_token
+from .tokens import consume_email_token, validate_email_token, generate_email_token
 from fastapi.responses import JSONResponse, RedirectResponse
 from .config import EXTERNAL_BASE_URL, AUTHORS, EMAIL_RECIPIENTS
 from .config import ADMIN_USER, ADMIN_PASSWORD_HASH
@@ -26,7 +26,7 @@ import jwt
 from datetime import timedelta
 
 # Use the same SECRET as other HMAC tokens for signing admin JWTs
-from .auth import SECRET, generate_token
+from .auth import SECRET
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
@@ -50,6 +50,15 @@ def verify_admin_jwt(token: str):
         return False
     except Exception:
         return False
+
+
+def _get_bearer_token(authorization: str | None) -> str:
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+    parts = authorization.split()
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        raise HTTPException(status_code=401, detail="Invalid Authorization header")
+    return parts[1]
 
 
 
@@ -263,28 +272,22 @@ def admin_login(payload: AdminLogin):
 
 
 @app.get("/admin/env-check")
-def admin_env_check():
+def admin_env_check(authorization: str | None = Header(default=None)):
+    token = _get_bearer_token(authorization)
+    if not verify_admin_jwt(token):
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
     import os
     admin_user = ADMIN_USER or os.environ.get("ADMIN_USER")
     admin_hash = ADMIN_PASSWORD_HASH or os.environ.get("ADMIN_PASSWORD_HASH")
-    admin_hash = admin_hash.strip() if isinstance(admin_hash, str) else admin_hash
     return {
         "admin_user_set": bool(admin_user),
         "admin_hash_set": bool(admin_hash),
-        "admin_hash_len": len(admin_hash) if admin_hash else 0,
-        "admin_hash_prefix": admin_hash[:10] if admin_hash else None,
     }
 
 
 @app.get("/admin/ping")
-def admin_ping(authorization: str | None = None):
-    # Accept Authorization: Bearer <token>
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Missing Authorization header")
-    parts = authorization.split()
-    if len(parts) != 2 or parts[0].lower() != "bearer":
-        raise HTTPException(status_code=401, detail="Invalid Authorization header")
-    token = parts[1]
+def admin_ping(authorization: str | None = Header(default=None)):
+    token = _get_bearer_token(authorization)
     # ensure admin user is read dynamically as well
     import os
     admin_user = ADMIN_USER or os.environ.get("ADMIN_USER")
@@ -296,15 +299,8 @@ def admin_ping(authorization: str | None = None):
 
 
 @app.post("/admin/send-test-emails")
-def admin_send_test_emails(request: Request):
-    # Authorization: Bearer <token>
-    auth = request.headers.get("authorization")
-    if not auth:
-        raise HTTPException(status_code=401, detail="Missing Authorization header")
-    parts = auth.split()
-    if len(parts) != 2 or parts[0].lower() != "bearer":
-        raise HTTPException(status_code=401, detail="Invalid Authorization header")
-    token = parts[1]
+def admin_send_test_emails(authorization: str | None = Header(default=None)):
+    token = _get_bearer_token(authorization)
     if not verify_admin_jwt(token):
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
@@ -318,8 +314,8 @@ def admin_send_test_emails(request: Request):
         if not to_email:
             results.append({"author": author, "ok": False, "error": "missing recipient"})
             continue
-        author_token = generate_token(author)
-        link = f"{base_url}/?token={author_token}"
+        author_token = generate_email_token(author)
+        link = f"{base_url}/token/{author_token}"
         subject = "Tu token de acceso - Memories"
         body = (
             f"Hola {author},\n\n"

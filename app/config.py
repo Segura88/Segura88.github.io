@@ -24,6 +24,11 @@ SMTP_USER = os.environ.get("SMTP_USER", "jaimesegurapuig@gmail.com")
 
 # From address used in outgoing emails
 EMAIL_FROM = os.environ.get("EMAIL_FROM", "jaimesegurapuig@gmail.com")
+
+# Resend (HTTP API) configuration
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
+# Must be a verified sender/domain in Resend
+RESEND_FROM = os.environ.get("RESEND_FROM", EMAIL_FROM)
 # Recipients mapping: author name -> email address. Update to real addresses.
 # Example: {"Jaime": "jaime@example.com", "Gabi": "gabi@example.com"}
 EMAIL_RECIPIENTS = {

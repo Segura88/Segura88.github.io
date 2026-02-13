@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import AdminLoginModal from './components/AdminLoginModal'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import './index.css'
 import Weeks from './pages/Weeks'
 import Write from './pages/Write'
@@ -9,6 +9,9 @@ import Goals from './pages/Goals'
 import Unlinked from './pages/Unlinked'
 import { useSearchParams } from 'react-router-dom'
 import axios from 'axios'
+
+const API_BASE = (import.meta.env.VITE_API_BASE as string) || 'http://127.0.0.1:8000'
+axios.defaults.baseURL = API_BASE.replace(/\/$/, '')
 
 function App(){
   return (
@@ -27,21 +30,26 @@ function App(){
 
 function TokenGate({ children }: { children: React.ReactNode }){
   const [params] = useSearchParams()
+  const location = useLocation()
+  const navigate = useNavigate()
   // Prefer token from URL param; fallback to localStorage so token persists across tabs
   const urlToken = params.get('token') || ''
+  const pathMatch = location.pathname.match(/^\/token\/([^/]+)$/)
+  const pathToken = pathMatch ? decodeURIComponent(pathMatch[1]) : ''
   const storedToken = typeof window !== 'undefined' ? localStorage.getItem('memories_token') : null
   const [tokenValid, setTokenValid] = useState<boolean | null>(null)
-  const [activeToken, setActiveToken] = useState<string | null>(urlToken || storedToken)
+  const [activeToken, setActiveToken] = useState<string | null>(urlToken || pathToken || storedToken)
   const [showAdmin, setShowAdmin] = useState(false)
 
   useEffect(()=>{
-    let tokenToCheck = urlToken || storedToken
+    if (!urlToken && pathToken) {
+      navigate(`/?token=${encodeURIComponent(pathToken)}`, { replace: true })
+    }
+    let tokenToCheck = urlToken || pathToken || storedToken
     console.debug('[TokenGate] tokenToCheck=', tokenToCheck)
     if(!tokenToCheck){ setTokenValid(false); return }
     let mounted = true
-  // call backend; use VITE_API_BASE when set (useful for deployed site)
-  const API_BASE = (import.meta.env.VITE_API_BASE as string) || 'http://127.0.0.1:8000'
-  axios.get(`${API_BASE.replace(/\/$/, '')}/token/${tokenToCheck}`).then((res)=>{
+    axios.get(`/token/${tokenToCheck}`).then((res)=>{
       console.debug('[TokenGate] token validation success', res && res.data)
       if(!mounted) return
       setTokenValid(true)
@@ -55,7 +63,7 @@ function TokenGate({ children }: { children: React.ReactNode }){
       try { localStorage.removeItem('memories_token') } catch(e){}
     })
     return ()=>{ mounted = false }
-  }, [urlToken, storedToken])
+  }, [urlToken, pathToken, storedToken, navigate])
 
   // splash shown when token missing or invalid; while checking tokenValid===null show splash too
   if(!tokenValid){

@@ -10,7 +10,10 @@ from .config import (
     SMTP_USER,
     EMAIL_FROM,
     EMAIL_RECIPIENTS,
+    RESEND_API_KEY,
+    RESEND_FROM,
 )
+import requests
 
 
 def send_email(subject: str, body: str, to: str) -> bool:
@@ -24,9 +27,31 @@ def send_email(subject: str, body: str, to: str) -> bool:
         print(f"[emailer] EMAILS_ENABLED is False, skipping send to {to}: {subject}")
         return False
 
-    if not SMTP_HOST:
+    if not SMTP_HOST and not RESEND_API_KEY:
         print("[emailer] SMTP_HOST not configured, skipping send")
         return False
+
+    # Prefer Resend if configured.
+    if RESEND_API_KEY:
+        try:
+            resp = requests.post(
+                "https://api.resend.com/emails",
+                headers={"Authorization": f"Bearer {RESEND_API_KEY}"},
+                json={
+                    "from": RESEND_FROM,
+                    "to": [to],
+                    "subject": subject,
+                    "text": body,
+                },
+                timeout=10,
+            )
+            if 200 <= resp.status_code < 300:
+                return True
+            print(f"[emailer] Resend error {resp.status_code}: {resp.text}")
+            return False
+        except Exception as e:
+            print(f"[emailer] Resend exception: {e}")
+            return False
 
     msg = EmailMessage()
     msg["Subject"] = subject
