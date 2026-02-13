@@ -216,13 +216,17 @@ def get_weeks(db: Session = Depends(get_db)):
 
 
 @app.get("/token/{token}")
-def consume_token(token: str):
+def consume_token(token: str, request: Request):
     # Validate without consuming: this endpoint is used by the frontend to check token validity
     author = validate_email_token(token)
     if not author:
         return JSONResponse(status_code=404, content={"detail": "invalid or expired token"})
-    # If EXTERNAL_BASE_URL is configured, redirect to frontend with the token.
-    if EXTERNAL_BASE_URL:
+
+    accept = request.headers.get("accept", "")
+    wants_json = "application/json" in accept
+
+    # If EXTERNAL_BASE_URL is configured, redirect only for browser navigation.
+    if EXTERNAL_BASE_URL and not wants_json:
         redirect_to = f"{EXTERNAL_BASE_URL.rstrip('/')}/write?token={token}&author={author}"
         return RedirectResponse(url=redirect_to)
 
